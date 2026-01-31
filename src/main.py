@@ -4,7 +4,6 @@ import logging
 from contextvars import ContextVar
 from pathlib import Path
 from typing import Optional
-from langchain_core.callbacks import UsageMetadataCallbackHandler
 import os
 from src.core import build_graph
 from src.agents.react import success_tool_names
@@ -52,7 +51,6 @@ async def run_task(
     graph = builder.compile()
     # Set task_id in context for this coroutine
     token = task_id_context.set(task_id)
-    handler = UsageMetadataCallbackHandler()
 
     # Setup task-specific file logging with filter
     log_dir = run_dir / "logs"
@@ -81,48 +79,25 @@ async def run_task(
                 "thread_id": task_id,
                 "dynamic_tools_dir": f"{run_dir}/private_dynamic_tools/dynamic_tools_{task_id}",
                 "dynamic_tools_public_dir": f"{run_dir}/dynamic_tools_public",
-            },
-            "callbacks": [handler],
+            }
         }
 
         # Ensure dynamic tools directories exist
         Path(config["configurable"]["dynamic_tools_dir"]).mkdir(parents=True, exist_ok=True)
         Path(config["configurable"]["dynamic_tools_public_dir"]).mkdir(parents=True, exist_ok=True)
 
-        last_message_cnt = 0
-        final_state = None
+        final_state = await graph.ainvoke(input=initial_state, config=config)
 
-        async for s in graph.astream(input=initial_state, config=config, stream_mode="values"):
-            final_state = s
-            try:
-                if isinstance(s, dict) and "messages" in s:
-                    if len(s["messages"]) <= last_message_cnt:
-                        continue
-                    last_message_cnt = len(s["messages"])
-                    message = s["messages"][-1]
-                    if isinstance(message, tuple):
-                        logger.info(f"Message: {message}")
-                    else:
-                        logger.info(
-                            f"Message: {message.content if hasattr(message, 'content') else str(message)}"
-                        )
-                else:
-                    logger.info(f"Output: {s}")
-            except Exception as e:
-                logger.error(f"Error processing stream output: {e}", exc_info=True)
-        usage = handler.usage_metadata
-        logger.info(f"Usage metadata: {usage}")
         logger.info("The task has completed successfully")
         private_dynamic_tools_dir = Path(config["configurable"]["dynamic_tools_dir"])
         private_dynamic_tools_files = list(private_dynamic_tools_dir.glob("*.py"))
         for file in private_dynamic_tools_files:
             if os.path.basename(file).split(".")[0] not in success_tool_names:
-                logger.info(f"Removing tool {file} because it is not in success_tool_names")
                 os.remove(file)
-        return final_state["final_answer"], usage
+        return final_state["final_answer"]
     except Exception as e:
         logger.error(f"Error in the task: {e}", exc_info=True)
-        return "['Error in the task']", {}
+        return "['Error in the task']"
     finally:
         root_logger.removeHandler(file_handler)
         file_handler.close()

@@ -212,6 +212,8 @@ print(result)
                 results.append(
                     ToolExecutionRecord(
                         tool_name=tool_name_without_ext,
+                        caller_message_id=historical_call_record.caller_message_id,
+                        tool_message_id=historical_call_record.tool_message_id,
                         tool_call_id=historical_call_record.tool_call_id,
                         arguments=arguments,
                         result=None,
@@ -222,6 +224,8 @@ print(result)
                 results.append(
                     ToolExecutionRecord(
                         tool_name=tool_name_without_ext,
+                        caller_message_id=historical_call_record.caller_message_id,
+                        tool_message_id=historical_call_record.tool_message_id,
                         tool_call_id=historical_call_record.tool_call_id,
                         arguments=arguments,
                         result=None,
@@ -702,8 +706,7 @@ def extract_tool_calls_from_messages(all_messages: List[BaseMessage]) -> List[To
                         "caller_message_id": message.id,
                     }
 
-    logger.info(f"tool_call_map: {tool_call_map}")
-    logger.info(f"all_messages: {all_messages}")
+    logger.info(f"all_messages: {format_conversation(all_messages)}")
     new_tool_executions = []
     # Extract tool execution results from ToolMessages
     for message in all_messages:
@@ -748,7 +751,7 @@ def extract_tool_calls_from_messages(all_messages: List[BaseMessage]) -> List[To
                 result=None,
             )
             new_tool_executions.append(execution_record)
-    logger.info(f"new_tool_executions: {new_tool_executions}")
+
     return new_tool_executions
 
 
@@ -795,3 +798,32 @@ def parse_markdown_sections(markdown_text: str) -> dict[str, str]:
         result["additional_tool_requirement"] = additional_match.group(1).strip()
     
     return result
+
+
+def format_conversation(all_messages: List[BaseMessage], max_len: int = 500) -> str:
+    """Pretty-print a React agent conversation for logging."""
+    lines = []
+    for i, m in enumerate(all_messages):
+        prefix = f"[{i:02d}]"
+        if isinstance(m, HumanMessage):
+            content = str(m.content)
+            lines.append(f"{prefix} User: {content}")
+
+        elif isinstance(m, AIMessage):
+            content = str(m.content)
+            lines.append(f"{prefix} Agent: {content}")
+
+            if getattr(m, "tool_calls", None):
+                for tc in m.tool_calls:
+                    name = getattr(tc, "name", None) or tc.get("name")
+                    args = getattr(tc, "args", None) or tc.get("args", {})
+                    lines.append(f"    └ tool_call -> {name} args={args}")
+
+        elif isinstance(m, ToolMessage):
+            result = str(m.content)
+            lines.append(f"{prefix} Tool: {result}")
+
+        else:
+            lines.append(f"{prefix} {type(m).__name__}: {m}")
+
+    return "\n".join(lines)

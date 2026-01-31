@@ -125,7 +125,7 @@ async def manager_node(
     recur_limit_exceeded = state.get("recur_limit_exceeded", False)
     if current_task_execution_cnt >= 1:  
         logger.info(
-            f"current_step_execution_cnt: {current_task_execution_cnt}, pending_responses: {pending_responses}, success_tools: {success_tools}"
+            f"current_step_execution_cnt: {current_task_execution_cnt}"
         )
 
         if pending_responses and not recur_limit_exceeded:

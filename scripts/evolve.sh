@@ -22,7 +22,6 @@ DATASET=""
 RUN_NAME=""
 BATCH_SIZE="5"
 START_STEP="0"
-DRY_RUN="0"
 TRAIN_STEPS=""
 MERGE_POLICY="naive"
 TIMEOUT=""
@@ -98,63 +97,25 @@ cd "$REPO_ROOT"
 
 DATASET_SIZE="$(
 python - <<'PY' "$REPO_ROOT" "$DATASET"
-import json
 import sys
 from pathlib import Path
 
 repo_root = Path(sys.argv[1])
 dataset = sys.argv[2]
 
-def count_hle() -> int:
-    p = repo_root / "dataset" / "HLE" / "hle_500.json"
-    data = json.loads(p.read_text(encoding="utf-8"))
-    items = data.get("data", [])
-    # mirror dataloader.load_hle_dataset: skip items without "question"
-    return sum(1 for item in items if item.get("question") is not None)
+# Use the same dataset loader used for training.
+# This ensures dataset files are auto-downloaded/generated when missing, and
+# the count matches the loader filtering logic.
+sys.path.insert(0, str(repo_root))
+import dataloader  # noqa: E402
 
-def count_xbench(which: str) -> int:
-    paths = []
-    if which == "deepsearch":
-        paths = [repo_root / "dataset" / "XBENCH" / "DeepSearch-2510.json"]
-    elif which == "scienceqa":
-        paths = [repo_root / "dataset" / "XBENCH" / "ScienceQA.json"]
-    elif which == "all":
-        paths = [
-            repo_root / "dataset" / "XBENCH" / "DeepSearch-2510.json",
-            repo_root / "dataset" / "XBENCH" / "ScienceQA.json",
-        ]
-    else:
-        raise ValueError(which)
-    total = 0
-    for p in paths:
-        total += len(json.loads(p.read_text(encoding="utf-8")))
-    return total
+count = 0
+# Larger batch size reduces Python-loop overhead while preserving the same count.
+for batch in dataloader.load_dataset(dataset, batch_size=256):
+    items = batch.get("data_items") or []
+    count += len(items)
 
-def count_deepsearchqa() -> int:
-    p = repo_root / "dataset" / "DEEPSEARCHQA" / "DSQA-full.json"
-    data = json.loads(p.read_text(encoding="utf-8"))
-    return len(data)
-def count_finsearchcomp() -> int:
-    p = repo_root / "dataset" / "FinSearchComp" / "t2_t3_questions.json"
-    data = json.loads(p.read_text(encoding="utf-8"))
-    return len(data)
-
-if dataset == "HLE":
-    n = count_hle()
-elif dataset == "XBENCH-deepsearch":
-    n = count_xbench("deepsearch")
-elif dataset == "XBENCH-scienceqa":
-    n = count_xbench("scienceqa")
-elif dataset == "XBENCH-all":
-    n = count_xbench("all")
-elif dataset == "DEEPSEARCHQA":
-    n = count_deepsearchqa()
-elif dataset == "FINSEARCHCOMP":
-    n = count_finsearchcomp()
-else:
-    raise SystemExit(f"Unknown dataset: {dataset}")
-
-print(n)
+print(count)
 PY
 )"
 
@@ -193,11 +154,6 @@ for ((i=START_STEP; i<TRAIN_END; i++)); do
   
   if [[ -n "$TIMEOUT" ]]; then
     CMD+=( --timeout "$TIMEOUT" )
-  fi
-
-  if [[ "$DRY_RUN" == "1" ]]; then
-    printf 'DRY_RUN: '; printf '%q ' "${CMD[@]}"; printf '\n'
-    continue
   fi
   
   "${CMD[@]}"

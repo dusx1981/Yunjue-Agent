@@ -300,7 +300,6 @@ async def enhance_tools(
         for tool_execution in tool_executions
         if tool_execution.tool_name not in success_tool_names
     ]
-    logger.info(f"tool_executions_to_analyze: {tool_executions_to_analyze}")
     tool_analyze_llm = create_llm(LLMType.TOOL_ANALYZE)
     tool_descriptions = {tool.name: tool.description for tool in tools}
     tool_input_schema = {tool.name: tool.args_schema for tool in tools}
@@ -418,8 +417,7 @@ Respond with only the word 'Input Error', 'Execution Failure', or 'Success'."
                 tool_enhancement(
                     tool_filename,
                     tool_executions,
-                    dynamic_tools_dir,  # Always save to private directory
-                    dynamic_tools_public_dir,
+                    dynamic_tools_dir, 
                 )
             )
         if codex_tasks:

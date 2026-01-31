@@ -30,7 +30,7 @@ We welcome connections of all kinds. For financing inquiries, technical exchange
 
 - **[2026-01-26]** 🎉 **Initial Release**: We have open-sourced the **Yunjue Agent** system!
 - **[Expected: 2026-01-31]** 🔜 **Data Release**: We are scheduling the release of **full traces for the five benchmark datasets.**
-- **[Expected: 2026-01-31]** ✨ **Clean Version Release**: We will release a **cleaned, easy-to-use version** of the codebase for better accessibility and integration.
+- **[2026-01-31]** ✨ **Reproduction & Evaluation Update**: We organized the evaluation script and reproduction workflow (see [Reproducing & evaluating results](#reproducing--evaluating-results) below).
 
 > **⚠️ Note on Current Release**: The current codebase is an initial release refactored from our research experiments. While we have verified the core logic, there might be minor bugs or edge cases during reproduction. We are continuously cleaning up the code and welcome any issues or PRs!
 ---
@@ -55,6 +55,8 @@ chmod +x install.sh
 
 ./install.sh
 
+# NOTE: `install.sh` installs the `codex` CLI, but you still need to configure Codex yourself
+# (e.g., set `OPENAI_API_KEY` and optionally `CODEX_PROFILE` in your environment).
 cp .env.example .env
 
 cp conf.yaml.example conf.yaml
@@ -65,6 +67,18 @@ source .venv/bin/activate
 ```
 
 🎉 **Expected Output:** Your agent will start completing questions from DeepSearchQA. You can view the corresponding logs in `output/test` 😊
+
+### ⚙️ Configuration
+
+- **Configuration reference**: see `docs/configuration_reference.md` for the meaning of key fields in `.env` (e.g., `TAVILY_API_KEY`, `MAX_WORKER_RECURSION_LIMIT`, `MAX_TASK_EXECUTION_CNT`, `PROXY_URL`) and `conf.yaml` (e.g., `VISION_MODEL`, `SUMMARIZE_MODEL`).
+- **Config templates**: start from `.env.example` and `conf.yaml.example`.
+
+### 🧪 Reproducing & evaluating results
+
+- **Reproduction guide (datasets + exact commands)**: see `docs/reproduce.md`.
+- **Main scripts**:
+  - `scripts/evolve.sh`: run the evolution loop to generate predictions under `output/<RUN_NAME>/`.
+  - `scripts/evaluate.py`: evaluate a run (e.g., `uv run scripts/evaluate.py --benchmark ... --predictions ...`).
 
 ---
 

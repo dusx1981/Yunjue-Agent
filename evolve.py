@@ -277,7 +277,7 @@ def run_task_process(
     query: str,
     run_dir: Path,
     task_id: str,
-    timeout: int = 30 * 60,
+    timeout: int = 5400,
 ):
     """Wrapper to run the async task in a separate process."""
 
@@ -310,7 +310,6 @@ async def train(
 ):
     manager = multiprocessing.Manager()
     step = 0
-    usage_metadata = {}
     total_queries = 0
     try:
         for data in data_iter:
@@ -347,7 +346,7 @@ async def train(
                             try:
                                 results[idx] = async_jobs[idx].get()
                             except Exception as e:
-                                results[idx] = ({"error": str(e), "task_id": task_ids[idx]}, {})
+                                results[idx] = {"error": str(e), "task_id": task_ids[idx]}
                             done_now.append(idx)
                     for idx in done_now:
                         pending.discard(idx)
@@ -358,10 +357,7 @@ async def train(
                 timed_out_task_ids: set[str] = set()
 
                 for idx in pending:
-                    results[idx] = (
-                        {"error": f"Timeout after {timeout} seconds", "task_id": task_ids[idx]},
-                        {},
-                    )
+                    results[idx] = {"error": f"Timeout after {timeout} seconds", "task_id": task_ids[idx]}
                     timed_out_task_ids.add(task_ids[idx])
 
                 if pending:
@@ -373,8 +369,8 @@ async def train(
                     pool.close()
                 pool.join()
             # Also drop tools for tasks that timed out inside the worker.
-            for idx, result_pair in enumerate(results):
-                result_payload = result_pair[0]
+            for idx, result in enumerate(results):
+                result_payload = result
                 if isinstance(result_payload, dict):
                     err = result_payload.get("error", "")
                     if isinstance(err, str) and "Timeout" in err:
@@ -383,29 +379,9 @@ async def train(
                 private_tool_dir = Path(run_dir) / "private_dynamic_tools" / f"dynamic_tools_{task_id}"
                 shutil.rmtree(private_tool_dir, ignore_errors=True)
             try:
-                usage_results = [result[1] for result in results]
-                for usage_result in usage_results:
-                    for model_name, usagedata in usage_result.items():
-                        if model_name not in usage_metadata:
-                            usage_metadata[model_name] = {
-                                "total_tokens": 0,
-                                "input_tokens": 0,
-                                "output_tokens": 0,
-                            }
-                        usage_metadata[model_name]["total_tokens"] += usagedata.get("total_tokens", 0)
-                        usage_metadata[model_name]["input_tokens"] += usagedata.get("input_tokens", 0)
-                        usage_metadata[model_name]["output_tokens"] += usagedata.get("output_tokens", 0)
-                results_to_save = []
-                results = [result[0] for result in results]
-                for res in results:
-                    try:
-                        results_to_save.append(res)
-                    except Exception as e:
-                        logger.error(f"Failed to parse result as JSON: {res}, error: {e}")
-                        results_to_save.append("Error: Invalid JSON response")
 
                 with open(prediction_file, "a", encoding="utf-8") as f:
-                    for idx, result in enumerate(results_to_save):
+                    for idx, result in enumerate(results):
                         result = {
                             "question_index": data_items[idx]["task_id"],
                             "question": data_items[idx]["query"],
@@ -427,7 +403,6 @@ async def train(
                 break
     finally:
         manager.shutdown()
-        logger.info(f"Usage metadata: {usage_metadata}")
 
 
 if __name__ == "__main__":
@@ -449,7 +424,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--timeout",
         type=int,
-        default=30 * 60,
+        default=5400,
         help="Timeout in seconds for each query execution (default: None, no timeout)",
     )
 
