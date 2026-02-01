@@ -33,7 +33,7 @@
 ## 📰 新闻与动态
 
 * **[2026-01-26]** 🎉 **首次发布**：我们开源了 **Yunjue Agent** 框架！
-* **[2026-01-31]** 🔜 **数据发布**：我们发布了在 **5 个数据集**（**HLE**, **DeepSearchQA**, **FinSearchComp (T2&T3)**, **xbench-ScienceQA** 和 **xbench-DeepSearch**）**zero-start settings** 下的系统日志：[Google Drive](https://drive.google.com/drive/folders/1mL5PqKZwOUVIP-UYg0bZr11fotpZmcqb?usp=sharing)。
+* **[2026-01-31]** 📦 **数据发布**：我们发布了在 **5 个数据集**（**HLE**, **DeepSearchQA**, **FinSearchComp (T2&T3)**, **xbench-ScienceQA** 和 **xbench-DeepSearch**）**zero-start settings** 下的系统日志：[Google Drive](https://drive.google.com/drive/folders/1mL5PqKZwOUVIP-UYg0bZr11fotpZmcqb?usp=sharing)。
 * **[2026-01-31]** ✨ **复现与评测更新**：我们整理了评测脚本与复现流程（见下方 [复现与评测](#复现与评测) 小节）。
 * **[预计: 2026-02-08]** 📄 **技术报告更新**: 我们将更新技术报告，包含更多技术细节与更深度的数据分析。
 
